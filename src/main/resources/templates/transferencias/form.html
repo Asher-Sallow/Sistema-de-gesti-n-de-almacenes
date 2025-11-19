@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transferencia de Productos- Sistema de Inventario</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #27ae60;
+            --danger-color: #e74c3c;
+        }
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .form-container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            padding: 30px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .form-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid var(--secondary-color);
+        }
+        .form-header h2 {
+            color: var(--primary-color);
+            font-weight: 700;
+        }
+        .form-header i {
+            font-size: 3rem;
+            color: var(--secondary-color);
+            margin-bottom: 10px;
+        }
+        .form-label {
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+        .form-control, .form-select {
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 10px 15px;
+            transition: all 0.3s;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
+        }
+        .btn-submit {
+            background: linear-gradient(135deg, var(--secondary-color), #5dade2);
+            border: none;
+            padding: 12px 40px;
+            font-weight: 600;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
+        }
+        .btn-cancel {
+            background: #95a5a6;
+            border: none;
+            padding: 12px 40px;
+            font-weight: 600;
+            border-radius: 8px;
+        }
+        .info-card {
+            background: #f8f9fa;
+            border-left: 4px solid var(--secondary-color);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .required::after {
+            content: "*";
+            color: var(--danger-color);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="form-container">
+            <!-- Header -->
+            <div class="form-header">
+                <i class="fas fa-exchange-alt"></i>
+                <h2>Nueva Transferencia de Productos</h2>
+                <p class="text-muted">Complete los datos para registrar la transferencia</p>
+            </div>
+            
+            <!-- Información -->
+            <div class="info-card">
+                <i class="fas fa-info-circle text-primary"></i> <strong>Importante:</strong> Verifique que las ubicaciones y cantidades sean correctas antes de confirmar la transferencia.
+            </div>
+            
+            <!-- Formulario -->
+            <form th:action="@{/transferencias-ubicacion/guardar}" th:object="${transferencia}" method="post">
+                <input type="hidden" th:field="*{id}"/>
+                
+                <!-- Producto -->
+                <div class="mb-3">
+                    <label for="producto" class="form-label required">Producto</label>
+                    <select class="form-select" id="producto" th:field="*{producto.id}" required>
+                        <option value="">-- Seleccione un producto --</option>
+                        <option th:each="producto : ${productos}" th:value="${producto.id}" th:text="${producto.codigo} + ' - ' + ${producto.nombre} + ' (Stock: ' + ${producto.stockActual} + ')'">
+                        </option>
+                    </select>
+                    <div class="form-text">Seleccione el producto a transferir</div>
+                </div>
+                
+                <!-- Cantidad -->
+                <div class="mb-3">
+                    <label for="cantidad" class="form-label required">Cantidad a Transferir</label>
+                    <input type="number" class="form-control" id="cantidad" th:field="*{cantidad}" min="1" required>
+                    <div class="form-text">Ingrese la cantidad de unidades</div>
+                </div>
+                
+                <!-- Ubicación Origen -->
+                <div class="mb-3">
+                    <label for="ubicacionOrigen" class="form-label required">Ubicación Origen</label>
+                    <select class="form-select" id="ubicacionOrigen" th:field="*{ubicacionOrigen.id}">
+                        <option value="">-- Sin ubicación origen (Nueva entrada) --</option>
+                        <option th:each="ubicacion : ${ubicaciones}" th:value="${ubicacion.id}" th:text="${ubicacion.codigo} + ' - ' + ${ubicacion.nombre}">
+                        </option>
+                    </select>
+                </div>
+                
+                <!-- Ubicación Destino -->
+                <div class="mb-3">
+                    <label for="ubicacionDestino" class="form-label required">Ubicación Destino</label>
+                    <select class="form-select" id="ubicacionDestino" th:field="*{ubicacionDestino.id}" required>
+                        <option value="">-- Seleccione ubicación destino --</option>
+                        <option th:each="ubicacion : ${ubicaciones}" th:value="${ubicacion.id}" th:text="${ubicacion.codigo} + ' - ' + ${ubicacion.nombre}">
+                        </option>
+                    </select>
+                </div>
+                
+                <!-- Motivo -->
+                <div class="mb-3">
+                    <label for="motivo" class="form-label required">Motivo de la Transferencia</label>
+                    <textarea class="form-control" id="motivo" th:field="*{motivo}" rows="3" required></textarea>
+                    <div class="form-text">Describa el motivo de la transferencia</div>
+                </div>
+                
+                <!-- Documento de Referencia -->
+                <div class="mb-3">
+                    <label for="documentoReferencia" class="form-label">Documento de Referencia</label>
+                    <input type="text" class="form-control" id="documentoReferencia" th:field="*{documentoReferencia}" placeholder="Ej: TRANS-001">
+                    <div class="form-text">Opcional: Número de documento relacionado</div>
+                </div>
+                
+                <!-- Botones -->
+                <div class="d-flex justify-content-between mt-4">
+                    <a th:href="@{/transferencias-ubicacion}" class="btn btn-cancel">
+                        <i class="fas fa-times"></i> Cancelar
+                    </a>
+                    <button type="submit" class="btn btn-primary btn-submit">
+                        <i class="fas fa-save"></i> Guardar Transferencia
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Script de validación -->
+    <script>
+        // Validar que ubicación origen y destino sean diferentes
+        document.querySelector('form').addEventListener('submit', function(e) {
+            const origen = document.getElementById('ubicacionOrigen').value;
+            const destino = document.getElementById('ubicacionDestino').value;
+            
+            if (origen && origen === destino) {
+                e.preventDefault();
+                alert('⚠️ La ubicación de origen y destino no pueden ser iguales');
+                return false;
+            }
+        });
+        
+        // Validar stock disponible
+        document.getElementById('producto').addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            const texto = selectedOption.text;
+            const stockMatch = texto.match(/Stock: (\d+)/);
+            
+            if (stockMatch) {
+                const stock = parseInt(stockMatch[1]);
+                const inputCantidad = document.getElementById('cantidad');
+                inputCantidad.max = stock;
+                inputCantidad.setAttribute('data-stock', stock);
+            }
+        });
+        
+        document.getElementById('cantidad').addEventListener('input', function() {
+            const stock = parseInt(this.getAttribute('data-stock') || '999999');
+            const cantidad = parseInt(this.value);
+            
+            if (cantidad > stock) {
+                this.setCustomValidity('La cantidad no puede ser mayor al stock disponible');
+            } else {
+                this.setCustomValidity('');
+            }
+        });
+    </script>
+</body>
+</html>

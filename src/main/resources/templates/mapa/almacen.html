@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapa del Almacén - Sistema de Inventario</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .zona {
+            border: 2px solid #3498db;
+            border-radius: 10px;
+            margin: 15px;
+            padding: 15px;
+            background-color: #f8f9fa;
+        }
+        .estanteria {
+            border: 2px solid #2ecc71;
+            border-radius: 8px;
+            margin: 10px;
+            padding: 10px;
+            background-color: #e8f5e9;
+        }
+        .rack {
+            border: 2px solid #e74c3c;
+            border-radius: 6px;
+            margin: 8px;
+            padding: 8px;
+            background-color: #fef2f2;
+            min-height: 150px;
+        }
+        .producto-item {
+            background: #3498db;
+            color: white;
+            border-radius: 4px;
+            padding: 8px;
+            margin: 5px;
+            cursor: pointer;
+            font-size: 0.9em;
+            text-align: center;
+            transition: all 0.3s;
+        }
+        .producto-item:hover {
+            transform: scale(1.05);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        .mapa-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .ubicacion-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .capacidad-bar {
+            height: 8px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+            margin-top: 5px;
+            overflow: hidden;
+        }
+        .capacidad-fill {
+            height: 100%;
+            background-color: #28a745;
+            border-radius: 4px;
+        }
+        .ubicacion-stats {
+            font-size: 0.85em;
+            color: #6c757d;
+        }
+        .zona-q {
+            border-color: #e74c3c !important;
+            background-color: #fff5f5 !important;
+        }
+        .ubicacion-q {
+            border-color: #e74c3c !important;
+            background-color: #ffeded !important;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-capsules"></i> Droguería Inti
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">
+                            <i class="fas fa-tachometer-alt"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/productos">
+                            <i class="fas fa-boxes"></i> Productos
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/mapa">
+                            <i class="fas fa-map"></i> Mapa del Almacén
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/ubicaciones">
+                            <i class="fas fa-warehouse"></i> Ubicaciones
+                        </a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle text-white" href="#" id="userDropdown" role="button"
+                           data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-user-circle"></i>
+                            <span sec:authentication="name">Usuario</span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                            <li>
+                                <form th:action="@{/logout}" method="post" class="d-inline">
+                                    <button type="submit" class="dropdown-item">
+                                        <i class="fas fa-sign-out-alt me-2"></i>Cerrar Sesión
+                                    </button>
+                                </form>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="h2">
+                <i class="fas fa-map"></i> Mapa del Almacén
+            </h1>
+            <div>
+                <a th:href="@{/ubicaciones/nuevo}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Nueva Ubicación
+                </a>
+            </div>
+        </div>
+        
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            <strong>Información:</strong> El color del fondo de los productos indica su estado de stock:
+            <span class="badge bg-danger ms-2">Stock bajo</span>
+            <span class="badge bg-warning text-dark ms-2">Stock crítico</span>
+            <span class="badge bg-success ms-2">Stock normal</span>
+        </div>
+
+        <div class="mapa-container">
+            <div th:each="zona : ${ubicaciones}" th:classappend="${zona.codigo.startsWith('ZONA-Q')} ? 'zona zona-q' : 'zona col-md-5'">
+                <div class="ubicacion-header">
+                    <h4>
+                        <i th:class="${zona.tipo == 'ZONA' ? 'fas fa-layer-group' : 'fas fa-cube'}"></i> 
+                        <span th:text="${zona.nombre}"></span>
+                    </h4>
+                    <span class="badge bg-primary" th:text="${zona.codigo}"></span>
+                </div>
+                <p class="text-muted">
+                    <i class="fas fa-tag me-1"></i> <span th:text="${zona.tipo}"></span>
+                    <span th:if="${zona.capacidadMaxima != null}" class="ms-3">
+                        <i class="fas fa-boxes me-1"></i> 
+                        <span th:text="${zona.capacidadActual} + '/' + ${zona.capacidadMaxima}"></span>
+                    </span>
+                </p>
+                
+                <div th:if="${zona.capacidadMaxima != null}" class="capacidad-bar">
+                    <div class="capacidad-fill" th:style="'width: ' + (${zona.capacidadActual} * 100.0 / ${zona.capacidadMaxima}) + '%'"></div>
+                </div>
+                
+                <div th:each="estanteria : ${zona.ubicacionesHijas}" th:classappend="${estanteria.codigo.startsWith('ZONA-Q')} ? 'estanteria ubicacion-q' : 'estanteria'">
+                    <div class="ubicacion-header">
+                        <h5>
+                            <i class="fas fa-cube"></i> 
+                            <span th:text="${estanteria.nombre}"></span>
+                        </h5>
+                        <span class="badge bg-secondary" th:text="${estanteria.codigo}"></span>
+                    </div>
+                    
+                    <div th:if="${estanteria.capacidadMaxima != null}" class="ubicacion-stats">
+                        <i class="fas fa-boxes me-1"></i>
+                        <span th:text="${estanteria.capacidadActual} + '/' + ${estanteria.capacidadMaxima}"></span>
+                    </div>
+                    
+                    <div th:each="rack : ${estanteria.ubicacionesHijas}" class="rack">
+                        <div class="ubicacion-header">
+                            <h6>
+                                <i class="fas fa-box"></i> 
+                                <span th:text="${rack.nombre}"></span>
+                            </h6>
+                            <span class="badge bg-info" th:text="${rack.codigo}"></span>
+                        </div>
+                        
+                        <div th:if="${rack.capacidadMaxima != null}" class="ubicacion-stats mb-2">
+                            <i class="fas fa-boxes me-1"></i>
+                            <span th:text="${rack.capacidadActual} + '/' + ${rack.capacidadMaxima}"></span>
+                        </div>
+                        
+                        <div class="d-flex flex-wrap">
+                            <div th:each="producto : ${productosPorUbicacion.get(rack.id)}" class="producto-item col-5"
+                                 th:classappend="${producto.stockActual == 0} ? 'bg-danger' : (${producto.stockActual <= producto.stockMinimo} ? 'bg-warning' : 'bg-success')"
+                                 th:attr="data-toggle=tooltip, title=${producto.nombre} + ' - Stock: ' + ${producto.stockActual}"
+                                 data-bs-toggle="tooltip" data-bs-placement="top">
+                                <div><strong th:text="${producto.codigo}"></strong></div>
+                                <small th:text="${#strings.abbreviate(producto.nombre, 15)}"></small>
+                                <div class="mt-1">
+                                    <small th:text="${producto.stockActual}"></small>
+                                    <small th:text="' ' + ${producto.unidadMedida}"></small>
+                                </div>
+                            </div>
+                            
+                            <div th:if="${productosPorUbicacion.get(rack.id) == null || #lists.isEmpty(productosPorUbicacion.get(rack.id))}" class="text-center text-muted py-3 w-100">
+                                <i class="fas fa-inbox fa-2x"></i>
+                                <p class="mt-2 mb-0">Sin productos</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div th:if="${#lists.isEmpty(ubicaciones)}" class="text-center py-5">
+            <i class="fas fa-map fa-3x text-muted mb-3"></i>
+            <h4 class="text-muted">No hay ubicaciones configuradas</h4>
+            <p class="text-muted">Comienza configurando las ubicaciones de tu almacén</p>
+            <a th:href="@{/ubicaciones/nuevo}" class="btn btn-primary mt-3">
+                <i class="fas fa-plus"></i> Crear Primera Ubicación
+            </a>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Inicializar tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        })
+        
+        // Auto-ocultar alertas después de 5 segundos
+        document.addEventListener('DOMContentLoaded', function() {
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(alert => {
+                setTimeout(() => {
+                    const bsAlert = new bootstrap.Alert(alert);
+                    bsAlert.close();
+                }, 5000);
+            });
+        });
+    </script>
+</body>
+</html>
