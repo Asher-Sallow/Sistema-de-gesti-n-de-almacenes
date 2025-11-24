@@ -55,39 +55,45 @@ public class SecurityConfig {
     }
     
     @Bean
-public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-    http
-        .csrf(csrf -> csrf.disable())
-        .authorizeHttpRequests(authz -> authz
-            .requestMatchers("/css/**", "/js/**", "/images/**", "/webjars/**").permitAll()
-            .requestMatchers("/login", "/error", "/secure-register/**").permitAll()
-            .requestMatchers("/debug/**").permitAll()
-            // ✅ PERMISOS PARA NUEVOS MÓDULOS
-            .requestMatchers("/ubicaciones/**").hasAnyRole("ADMIN", "GERENTE", "ALMACENERO")
-            .requestMatchers("/control-calidad/**").hasAnyRole("ADMIN", "GERENTE")
-            .requestMatchers("/transferencias-ubicacion/**").hasAnyRole("ADMIN", "GERENTE", "ALMACENERO")
-            // Permisos existentes
-            .requestMatchers("/auditoria/**").hasRole("ADMIN")
-            .requestMatchers("/reportes/**").hasAnyRole("ADMIN", "GERENTE")
-            .requestMatchers("/productos/**", "/movimientos/**").hasAnyRole("ADMIN", "GERENTE", "ALMACENERO")
-            .anyRequest().authenticated()
-        )
-        .formLogin(form -> form
-            .loginPage("/login")
-            .defaultSuccessUrl("/")
-            .failureUrl("/login?error=true")
-            .permitAll()
-        )
-        .logout(logout -> logout
-            .logoutSuccessUrl("/login?logout=true")
-            .permitAll()
-        )
-        .sessionManagement(session -> session
-            .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
-        )
-        .authenticationProvider(authenticationProvider())
-        .addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
-    
-    return http.build();
-}
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http
+            .csrf(csrf -> csrf.disable())
+            .authorizeHttpRequests(authz -> authz
+                .requestMatchers("/css/**", "/js/**", "/images/**", "/webjars/**", "/static/**").permitAll()
+                .requestMatchers("/login", "/error", "/secure-register/**").permitAll()
+                .requestMatchers("/debug/**").permitAll()
+                // ✅ PERMISOS PARA TODOS LOS MÓDULOS CORREGIDOS
+                .requestMatchers("/ubicaciones/**").hasAnyRole("ADMIN", "GERENTE", "ALMACENERO")
+                .requestMatchers("/control-calidad/**").hasAnyRole("ADMIN", "GERENTE")
+                .requestMatchers("/transferencias-ubicacion/**").hasAnyRole("ADMIN", "GERENTE", "ALMACENERO")
+                .requestMatchers("/auditoria/**").hasRole("ADMIN")
+                .requestMatchers("/reportes/**").hasAnyRole("ADMIN", "GERENTE")
+                .requestMatchers("/alertas/**").hasAnyRole("ADMIN", "GERENTE", "ALMACENERO")
+                .requestMatchers("/mapa/**").hasAnyRole("ADMIN", "GERENTE")
+                // ✅ CORRECCIÓN CRÍTICA: Permitir acceso a productos para roles autorizados
+                .requestMatchers("/productos/**", "/movimientos/**").hasAnyRole("ADMIN", "GERENTE", "ALMACENERO")
+                // Dashboard accesible para todos los roles autenticados
+                .requestMatchers("/").hasAnyRole("ADMIN", "GERENTE", "ALMACENERO", "CONSULTOR")
+                .anyRequest().authenticated()
+            )
+            .formLogin(form -> form
+                .loginPage("/login")
+                .defaultSuccessUrl("/", true)
+                .failureUrl("/login?error=true")
+                .permitAll()
+            )
+            .logout(logout -> logout
+                .logoutSuccessUrl("/login?logout=true")
+                .invalidateHttpSession(true)
+                .clearAuthentication(true)
+                .permitAll()
+            )
+            .sessionManagement(session -> session
+                .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
+            )
+            .authenticationProvider(authenticationProvider())
+            .addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
+        
+        return http.build();
+    }
 }

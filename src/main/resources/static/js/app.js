@@ -1,10 +1,11 @@
-/* 
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Other/javascript.js to edit this template
+/**
+ * App.js - Funcionalidades comunes del sistema de inventario
+ * @author Sistema de Inventario - Droguería Inti
  */
 
-// Funciones generales de la aplicación
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('Sistema de Inventario inicializado');
+
     // Inicializar tooltips de Bootstrap
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
     var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
@@ -12,18 +13,19 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Confirmación para eliminar
-    const deleteButtons = document.querySelectorAll('.btn-delete');
-    deleteButtons.forEach(button => {
+    document.querySelectorAll('.btn-delete').forEach(button => {
         button.addEventListener('click', function(e) {
-            if (!confirm('¿Está seguro de que desea eliminar este registro?')) {
+            const confirmMessage = this.getAttribute('data-confirm-message') || 
+                '¿Está seguro de que desea eliminar este registro? Esta acción no se puede deshacer.';
+            
+            if (!confirm(confirmMessage)) {
                 e.preventDefault();
             }
         });
     });
 
     // Auto-ocultar alertas después de 5 segundos
-    const alerts = document.querySelectorAll('.alert.auto-dismiss');
-    alerts.forEach(alert => {
+    document.querySelectorAll('.alert.auto-dismiss').forEach(alert => {
         setTimeout(() => {
             const bsAlert = new bootstrap.Alert(alert);
             bsAlert.close();
@@ -31,104 +33,121 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Validación de formularios
-    const forms = document.querySelectorAll('form.needs-validation');
-    forms.forEach(form => {
+    document.querySelectorAll('form.needs-validation').forEach(form => {
         form.addEventListener('submit', function(event) {
             if (!form.checkValidity()) {
                 event.preventDefault();
                 event.stopPropagation();
             }
             form.classList.add('was-validated');
+        }, false);
+    });
+
+    // Mostrar/Ocultar contraseña
+    document.querySelectorAll('.toggle-password').forEach(button => {
+        button.addEventListener('click', function() {
+            const input = document.querySelector(this.getAttribute('data-target'));
+            const icon = this.querySelector('i');
+            
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
         });
     });
 
-    // Actualizar contadores en tiempo real
-    actualizarContadores();
-    setInterval(actualizarContadores, 60000); // Actualizar cada minuto
+    // Inicializar selects con búsqueda
+    if (typeof $.fn.select2 !== 'undefined') {
+        $('.select2').select2({
+            theme: 'bootstrap-5',
+            width: '100%'
+        });
+    }
+
+    // Inicializar datepickers
+    if (typeof flatpickr !== 'undefined') {
+        flatpickr('.datepicker', {
+            dateFormat: "Y-m-d",
+            locale: "es"
+        });
+        
+        flatpickr('.datetimepicker', {
+            enableTime: true,
+            dateFormat: "Y-m-d H:i",
+            locale: "es"
+        });
+    }
 });
 
-// Función para actualizar contadores
-function actualizarContadores() {
-    // Aquí podrías hacer llamadas AJAX para actualizar contadores en tiempo real
-    console.log('Actualizando contadores...');
-}
-
-// Función para formatear números como moneda
-function formatCurrency(amount) {
-    return new Intl.NumberFormat('es-PE', {
-        style: 'currency',
-        currency: 'PEN'
-    }).format(amount);
-}
-
-// Función para formatear fechas
-function formatDate(dateString) {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('es-PE', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
-    });
-}
-
-// Función para formatear fecha y hora
-function formatDateTime(dateTimeString) {
-    const date = new Date(dateTimeString);
-    return date.toLocaleString('es-PE', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
-}
-
-// Función para mostrar loading en botones
-function showLoading(button) {
-    const originalText = button.innerHTML;
-    button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Procesando...';
-    button.disabled = true;
+// Funciones de utilidad global
+const app = {
+    /**
+     * Formatear número como moneda
+     * @param {number} amount - Cantidad a formatear
+     * @returns {string} - Cantidad formateada como moneda
+     */
+    formatCurrency: function(amount) {
+        return new Intl.NumberFormat('es-PE', {
+            style: 'currency',
+            currency: 'PEN'
+        }).format(amount);
+    },
     
-    return function() {
-        button.innerHTML = originalText;
-        button.disabled = false;
-    };
-}
-
-// Función para buscar productos en tiempo real
-function buscarProductos(query) {
-    if (query.length < 2) return;
+    /**
+     * Formatear fecha
+     * @param {string|Date} date - Fecha a formatear
+     * @returns {string} - Fecha formateada
+     */
+    formatDate: function(date) {
+        if (!date) return '-';
+        
+        const d = new Date(date);
+        return d.toLocaleDateString('es-PE', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+        });
+    },
     
-    fetch(`/inventory/api/productos/buscar?q=${encodeURIComponent(query)}`)
-        .then(response => response.json())
-        .then(data => {
-            mostrarResultadosBusqueda(data);
-        })
-        .catch(error => console.error('Error en búsqueda:', error));
-}
-
-// Función para mostrar resultados de búsqueda
-function mostrarResultadosBusqueda(productos) {
-    const resultados = document.getElementById('resultados-busqueda');
-    if (resultados) {
-        resultados.innerHTML = productos.map(producto => `
-            <div class="list-group-item">
-                <div class="d-flex w-100 justify-content-between">
-                    <h6 class="mb-1">${producto.nombre}</h6>
-                    <small>Stock: ${producto.stockActual}</small>
-                </div>
-                <p class="mb-1">${producto.codigo} - ${producto.categoria}</p>
-                <small>Precio: ${formatCurrency(producto.precioVenta)}</small>
-            </div>
-        `).join('');
+    /**
+     * Formatear fecha y hora
+     * @param {string|Date} dateTime - Fecha y hora a formatear
+     * @returns {string} - Fecha y hora formateadas
+     */
+    formatDateTime: function(dateTime) {
+        if (!dateTime) return '-';
+        
+        const d = new Date(dateTime);
+        return d.toLocaleString('es-PE', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    },
+    
+    /**
+     * Mostrar loading en botones
+     * @param {HTMLElement} button - Botón en el que mostrar el loading
+     * @returns {function} - Función para restaurar el estado original del botón
+     */
+    showLoading: function(button) {
+        const originalText = button.innerHTML;
+        button.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Procesando...';
+        button.disabled = true;
+        
+        return function() {
+            button.innerHTML = originalText;
+            button.disabled = false;
+        };
     }
-}
-
-// Exportar funciones para uso global
-window.app = {
-    formatCurrency,
-    formatDate,
-    formatDateTime,
-    showLoading,
-    buscarProductos
 };
+
+// Exportar app para uso global
+window.app = app;

@@ -1,125 +1,34 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity6">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Alertas - Sistema de Inventario</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <th:block th:replace="~{fragments/header :: head(title='Alertas')}"></th:block>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-        <div class="container">
-            <a class="navbar-brand" href="/">
-                <i class="fas fa-capsules"></i> Droguería Inti
-            </a>
-        </div>
-    </nav>
+    <th:block th:replace="~{fragments/header :: header(pageTitle='Alertas del Sistema', pageIcon='fas fa-bell')}"></th:block>
 
-    <div class="container-fluid">
-        <div class="row">
-            <nav class="col-md-3 col-lg-2 d-md-block bg-light sidebar">
-                <div class="position-sticky pt-3">
-                    <ul class="nav flex-column">
-                        <li class="nav-item">
-                            <a class="nav-link" href="/">
-                                <i class="fas fa-tachometer-alt"></i> Dashboard
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/productos">
-                                <i class="fas fa-boxes"></i> Productos
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/movimientos">
-                                <i class="fas fa-exchange-alt"></i> Movimientos
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link active" href="/alertas">
-                                <i class="fas fa-bell"></i> Alertas
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/reportes">
-                                <i class="fas fa-chart-bar"></i> Reportes
-                            </a>
-                        </li>
-                        <!-- ✅ NUEVO: Menú de Auditoría (solo para ADMIN) -->
-                        <li class="nav-item" sec:authorize="hasRole('ADMIN')">
-                            <a class="nav-link" href="/auditoria">
-                                <i class="fas fa-clipboard-check"></i> Auditoría
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-            </nav>
-
-            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
-                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-                    <h1 class="h2">Alertas del Sistema</h1>
-                    <div>
-                        <span class="badge bg-danger" th:text="${totalAlertasNoLeidas} + ' no leídas'"></span>
-                    </div>
-                </div>
-
-                <!-- Alertas -->
-                <div class="row">
-                    <div class="col-12">
-                        <div th:each="alerta : ${alertas}" class="card mb-3">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div>
-                                        <h5 class="card-title">
-                                            <span th:if="${alerta.nivelPrioridad == 'critica'}" 
-                                                  class="badge bg-danger">CRÍTICA</span>
-                                            <span th:if="${alerta.nivelPrioridad == 'alta'}" 
-                                                  class="badge bg-warning">ALTA</span>
-                                            <span th:if="${alerta.nivelPrioridad == 'media'}" 
-                                                  class="badge bg-info">MEDIA</span>
-                                            <span th:if="${alerta.nivelPrioridad == 'baja'}" 
-                                                  class="badge bg-secondary">BAJA</span>
-                                            <span th:text="${alerta.tipoAlerta.nombre}"></span>
-                                        </h5>
-                                        <p class="card-text" th:text="${alerta.mensaje}"></p>
-                                        <small class="text-muted">
-                                            <i class="fas fa-clock"></i>
-                                            <span th:text="${#temporals.format(alerta.fechaAlerta, 'dd/MM/yyyy HH:mm')}"></span>
-                                            <span th:if="${alerta.producto != null}">
-                                                • Producto: <span th:text="${alerta.producto.nombre}"></span>
-                                            </span>
-                                            <span th:if="${alerta.lote != null}">
-                                                • Lote: <span th:text="${alerta.lote.numeroLote}"></span>
-                                            </span>
-                                        </small>
-                                    </div>
-                                    <div th:if="${!alerta.leida}">
-                                        <a th:href="@{/alertas/marcar-leida/{id}(id=${alerta.id})}" 
-                                           class="btn btn-sm btn-outline-success">
-                                            <i class="fas fa-check"></i> Marcar como leída
-                                        </a>
-                                    </div>
-                                    <div th:if="${alerta.leida}">
-                                        <span class="badge bg-success">
-                                            <i class="fas fa-check"></i> Leída
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div th:if="${#lists.isEmpty(alertas)}" class="text-center py-5">
-                            <i class="fas fa-bell-slash fa-3x text-muted mb-3"></i>
-                            <h4 class="text-muted">No hay alertas</h4>
-                            <p class="text-muted">Todas las alertas están gestionadas</p>
-                        </div>
-                    </div>
-                </div>
-            </main>
+    <div th:each="alerta : ${alertas}" class="card mb-3">
+        <div class="card-body">
+            <h5 class="card-title">
+                <span th:if="${alerta.nivelPrioridad == 'critica'}" class="badge bg-danger">CRÍTICA</span>
+                <span th:if="${alerta.nivelPrioridad == 'alta'}" class="badge bg-warning">ALTA</span>
+                <span th:text="${alerta.tipoAlerta.nombre}"></span>
+            </h5>
+            <p class="card-text" th:text="${alerta.mensaje}"></p>
+            <small class="text-muted">
+                <i class="fas fa-clock"></i>
+                <span th:text="${#temporals.format(alerta.fechaAlerta, 'dd/MM/yyyy HH:mm')}"></span>
+            </small>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <div th:if="${#lists.isEmpty(alertas)}" class="text-center py-5">
+        <i class="fas fa-bell-slash fa-3x text-muted mb-3"></i>
+        <h4 class="text-muted">No hay alertas</h4>
+    </div>
+
+    <th:block th:replace="~{fragments/footer :: footer}"></th:block>
 </body>
 </html>

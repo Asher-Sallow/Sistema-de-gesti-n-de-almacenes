@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Categorías - Sistema de Inventario</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+    <style>
+        .page-header {
+            background: linear-gradient(135deg, #6f42c1 0%, #9b59b6 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 10px;
+            margin-bottom: 2rem;
+        }
+        .card {
+            border: none;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            border-radius: 10px;
+        }
+        .table-hover tbody tr:hover {
+            background-color: #f8f9fa;
+            cursor: pointer;
+        }
+        .btn-icon {
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .alert-custom {
+            border-radius: 10px;
+            border: none;
+        }
+        .categoria-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #6f42c1 0%, #9b59b6 100%);
+            color: white;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid py-4">
+        <!-- Page Header -->
+        <div class="page-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="mb-0">
+                        <i class="fas fa-tags me-2"></i>Gestión de Categorías
+                    </h2>
+                    <p class="mb-0 mt-2 opacity-75">Organización y clasificación de productos</p>
+                </div>
+                <a th:href="@{/categorias/nuevo}" class="btn btn-light btn-lg">
+                    <i class="fas fa-plus me-2"></i>Nueva Categoría
+                </a>
+            </div>
+        </div>
+
+        <!-- Mensajes de alerta -->
+        <div th:if="${success}" class="alert alert-success alert-dismissible fade show alert-custom" role="alert">
+            <i class="fas fa-check-circle me-2"></i>
+            <span th:text="${success}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        <div th:if="${error}" class="alert alert-danger alert-dismissible fade show alert-custom" role="alert">
+            <i class="fas fa-exclamation-circle me-2"></i>
+            <span th:text="${error}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+
+        <!-- Estadísticas -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card bg-primary text-white">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="fas fa-tags me-2"></i>Total Categorías
+                        </h5>
+                        <h2 class="mb-0" th:text="${totalCategorias}">0</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card bg-success text-white">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="fas fa-check-circle me-2"></i>Categorías Activas
+                        </h5>
+                        <h2 class="mb-0" th:text="${categoriasActivas}">0</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card bg-secondary text-white">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="fas fa-ban me-2"></i>Categorías Inactivas
+                        </h5>
+                        <h2 class="mb-0" th:text="${categoriasInactivas}">0</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabla de Categorías -->
+        <div class="card">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0">
+                    <i class="fas fa-list me-2"></i>Lista de Categorías
+                    <span class="badge bg-primary ms-2" th:text="${categorias != null ? categorias.size() : 0}">0</span>
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table id="tablaCategorias" class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 80px;"></th>
+                                <th><i class="fas fa-hashtag me-1"></i>ID</th>
+                                <th><i class="fas fa-tag me-1"></i>Nombre</th>
+                                <th><i class="fas fa-align-left me-1"></i>Descripción</th>
+                                <th><i class="fas fa-toggle-on me-1"></i>Estado</th>
+                                <th class="text-center"><i class="fas fa-cogs me-1"></i>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:if="${categorias == null or categorias.isEmpty()}">
+                                <td colspan="6" class="text-center py-5">
+                                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                                    <p class="text-muted mb-0">No hay categorías registradas</p>
+                                </td>
+                            </tr>
+                            <tr th:each="categoria : ${categorias}">
+                                <td class="text-center">
+                                    <div class="categoria-icon">
+                                        <i class="fas fa-tag"></i>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary" th:text="${categoria.id}">1</span>
+                                </td>
+                                <td>
+                                    <strong th:text="${categoria.nombre}">Categoría</strong>
+                                </td>
+                                <td>
+                                    <span th:if="${categoria.descripcion != null and !categoria.descripcion.isEmpty()}" 
+                                          th:text="${categoria.descripcion}">
+                                        Descripción
+                                    </span>
+                                    <span th:if="${categoria.descripcion == null or categoria.descripcion.isEmpty()}" 
+                                          class="text-muted">
+                                        <i>Sin descripción</i>
+                                    </span>
+                                </td>
+                                <td>
+                                    <span th:if="${categoria.activa != null and categoria.activa}" 
+                                          class="badge bg-success">
+                                        <i class="fas fa-check me-1"></i>Activa
+                                    </span>
+                                    <span th:if="${categoria.activa == null or !categoria.activa}" 
+                                          class="badge bg-secondary">
+                                        <i class="fas fa-times me-1"></i>Inactiva
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    <div class="btn-group" role="group">
+                                        <a th:href="@{/categorias/editar/{id}(id=${categoria.id})}" 
+                                           class="btn btn-sm btn-warning"
+                                           title="Editar">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <a th:href="@{/categorias/toggle-estado/{id}(id=${categoria.id})}" 
+                                           class="btn btn-sm"
+                                           th:classappend="${categoria.activa != null and categoria.activa} ? 'btn-secondary' : 'btn-success'"
+                                           th:title="${categoria.activa != null and categoria.activa} ? 'Desactivar' : 'Activar'">
+                                            <i class="fas"
+                                               th:classappend="${categoria.activa != null and categoria.activa} ? 'fa-toggle-off' : 'fa-toggle-on'"></i>
+                                        </a>
+                                        <a th:href="@{/categorias/eliminar/{id}(id=${categoria.id})}" 
+                                           class="btn btn-sm btn-danger"
+                                           onclick="return confirm('¿Está seguro de eliminar esta categoría?')"
+                                           title="Eliminar">
+                                            <i class="fas fa-trash"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- DataTables JS -->
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+
+    <script th:inline="none">
+        $(document).ready(function() {
+            // Inicializar DataTables solo si hay datos
+            var tableRows = $('#tablaCategorias tbody tr').length;
+            var hasData = tableRows > 1 || (tableRows === 1 && $('#tablaCategorias tbody tr td').length > 1);
+            
+            if (hasData) {
+                $('#tablaCategorias').DataTable({
+                    language: {
+                        url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json'
+                    },
+                    order: [[2, "asc"]], // Ordenar por nombre
+                    pageLength: 25,
+                    responsive: true
+                });
+            }
+
+            // Auto-cerrar alertas después de 5 segundos
+            setTimeout(function() {
+                $('.alert').fadeOut('slow');
+            }, 5000);
+        });
+    </script>
+</body>
+</html>

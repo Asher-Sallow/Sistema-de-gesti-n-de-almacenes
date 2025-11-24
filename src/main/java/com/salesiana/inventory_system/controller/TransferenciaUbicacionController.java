@@ -32,40 +32,57 @@ public class TransferenciaUbicacionController {
     private UsuarioService usuarioService;
 
     @GetMapping
-    public String listarTransferencias(
-            @RequestParam(required = false) Integer productoId,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaInicio,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaFin,
-            Model model) {
+public String listarTransferencias(
+        @RequestParam(required = false) Integer productoId,
+        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaInicio,
+        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaFin,
+        Model model) {
+    try {
+        List<TransferenciaUbicacion> transferencias;
         
-        try {
-            List<TransferenciaUbicacion> transferencias;
-            
-            if (productoId != null) {
-                transferencias = transferenciaService.obtenerPorProducto(productoId);
-                model.addAttribute("productoSeleccionado", productoService.obtenerProductoPorId(productoId).orElse(null));
-            } else if (fechaInicio != null && fechaFin != null) {
-                transferencias = obtenerTransferenciasPorRangoFechas(fechaInicio, fechaFin);
-            } else {
-                transferencias = transferenciaService.obtenerUltimasTransferencias();
-            }
-            
-            model.addAttribute("transferencias", transferencias != null ? transferencias : Collections.emptyList());
-            model.addAttribute("productos", productoService.obtenerTodosProductos());
-            model.addAttribute("ubicaciones", ubicacionService.obtenerTodasUbicaciones());
-            
-            System.out.println("✅ Transferencias cargadas: " + (transferencias != null ? transferencias.size() : 0));
-        } catch (Exception e) {
-            System.err.println("❌ Error al listar transferencias: " + e.getMessage());
-            e.printStackTrace();
-            model.addAttribute("error", "Error al cargar las transferencias: " + e.getMessage());
-            model.addAttribute("transferencias", Collections.emptyList());
-            model.addAttribute("productos", Collections.emptyList());
-            model.addAttribute("ubicaciones", Collections.emptyList());
+        if (productoId != null) {
+            transferencias = transferenciaService.obtenerPorProducto(productoId);
+            model.addAttribute("productoSeleccionado", 
+                productoService.obtenerProductoPorId(productoId).orElse(null));
+        } else if (fechaInicio != null && fechaFin != null) {
+            transferencias = obtenerTransferenciasPorRangoFechas(fechaInicio, fechaFin);
+        } else {
+            transferencias = transferenciaService.obtenerUltimasTransferencias();
         }
-        
-        return "transferencias/lista";
+
+        // CALCULAR ESTADÍSTICAS EN JAVA (sin usar estado que no existe)
+        long productosUnicos = 0;
+
+        if (transferencias != null && !transferencias.isEmpty()) {
+            // Contar productos únicos usando Set
+            java.util.Set<Integer> productosSet = new java.util.HashSet<>();
+            for (TransferenciaUbicacion t : transferencias) {
+                if (t.getProducto() != null && t.getProducto().getId() != null) {
+                    productosSet.add(t.getProducto().getId());
+                }
+            }
+            productosUnicos = productosSet.size();
+        }
+
+        // Pasar estadísticas calculadas al modelo
+        model.addAttribute("transferencias", transferencias != null ? transferencias : Collections.emptyList());
+        model.addAttribute("productosUnicos", productosUnicos);
+        model.addAttribute("productos", productoService.obtenerTodosProductos());
+        model.addAttribute("ubicaciones", ubicacionService.obtenerTodasUbicaciones());
+
+        System.out.println("✅ Transferencias cargadas: " + (transferencias != null ? transferencias.size() : 0));
+        System.out.println("📊 Estadísticas - Productos únicos: " + productosUnicos);
+    } catch (Exception e) {
+        System.err.println("❌ Error al listar transferencias: " + e.getMessage());
+        e.printStackTrace();
+        model.addAttribute("error", "Error al cargar las transferencias: " + e.getMessage());
+        model.addAttribute("transferencias", Collections.emptyList());
+        model.addAttribute("productosUnicos", 0L);
+        model.addAttribute("productos", Collections.emptyList());
+        model.addAttribute("ubicaciones", Collections.emptyList());
     }
+    return "transferencias/lista";
+}
     
     private List<TransferenciaUbicacion> obtenerTransferenciasPorRangoFechas(LocalDateTime fechaInicio, LocalDateTime fechaFin) {
         // TODO: Implementar método en el servicio para filtrar por rango de fechas
