@@ -49,7 +49,6 @@
                         <option value="stock-bajo">Stock Bajo</option>
                         <option value="vencimientos">Productos por Vencer</option>
                         <option value="rotacion">Análisis de Rotación</option>
-                        <option value="compras-proveedor">Compras por Proveedor</option>
                         <option value="movimientos-anuales">Movimientos Anuales</option>
                     </select>
                 </div>
@@ -209,36 +208,6 @@
                     <small class="text-muted">
                         <i class="fas fa-info-circle me-1"></i>
                         Basado en movimientos de los últimos 90 días
-                    </small>
-                </div>
-            </div>
-        </div>
-
-        <!-- Compras por Proveedor -->
-        <div class="col-md-4 mb-4">
-            <div class="card report-card border-secondary h-100">
-                <div class="card-body text-center">
-                    <div class="report-icon text-secondary">
-                        <i class="fas fa-truck"></i>
-                    </div>
-                    <h5 class="card-title">Compras por Proveedor</h5>
-                    <p class="card-text">
-                        Análisis de compras realizadas a cada proveedor para evaluar 
-                        rendimiento y negociaciones.
-                    </p>
-                    <div class="btn-group mt-3">
-                        <a class="btn btn-primary" th:href="@{/reportes/compras-proveedor/excel}">
-                            <i class="fas fa-file-excel"></i> Excel
-                        </a>
-                        <a class="btn btn-danger" th:href="@{/reportes/compras-proveedor/pdf}">
-                            <i class="fas fa-file-pdf"></i> PDF
-                        </a>
-                    </div>
-                </div>
-                <div class="card-footer bg-transparent">
-                    <small class="text-muted">
-                        <i class="fas fa-info-circle me-1"></i>
-                        Compras agrupadas por proveedor y producto
                     </small>
                 </div>
             </div>

@@ -62,7 +62,11 @@ public class CategoriaController {
     public String mostrarFormularioNuevo(Model model) {
         try {
             System.out.println("=== CARGANDO FORMULARIO NUEVA CATEGORÍA ===");
-            model.addAttribute("categoria", new Categoria());
+            
+            if (!model.containsAttribute("categoria")) {
+                model.addAttribute("categoria", new Categoria());
+            }
+            
             System.out.println("✅ Formulario de creación de categoría cargado exitosamente");
             return "categorias/form";
         } catch (Exception e) {
@@ -80,15 +84,19 @@ public class CategoriaController {
     public String mostrarFormularioEditar(@PathVariable Integer id, Model model, RedirectAttributes redirectAttributes) {
         try {
             System.out.println("=== CARGANDO FORMULARIO EDITAR CATEGORÍA ID: " + id + " ===");
-            Categoria categoria = categoriaService.obtenerCategoriaPorId(id).orElse(null);
             
-            if (categoria == null) {
-                System.out.println("❌ Categoría no encontrada");
-                redirectAttributes.addFlashAttribute("error", "Categoría no encontrada");
-                return "redirect:/categorias";
+            if (!model.containsAttribute("categoria")) {
+                Categoria categoria = categoriaService.obtenerCategoriaPorId(id).orElse(null);
+                
+                if (categoria == null) {
+                    System.out.println("❌ Categoría no encontrada");
+                    redirectAttributes.addFlashAttribute("error", "Categoría no encontrada");
+                    return "redirect:/categorias";
+                }
+                
+                model.addAttribute("categoria", categoria);
             }
 
-            model.addAttribute("categoria", categoria);
             System.out.println("✅ Formulario de edición cargado exitosamente");
             return "categorias/form";
         } catch (Exception e) {
@@ -112,8 +120,14 @@ public class CategoriaController {
             // Validaciones básicas
             if (categoria.getNombre() == null || categoria.getNombre().trim().isEmpty()) {
                 redirectAttributes.addFlashAttribute("error", "El nombre de la categoría es requerido");
+                redirectAttributes.addFlashAttribute("categoria", categoria);
                 System.out.println("❌ Error: Nombre de categoría vacío");
-                return "redirect:/categorias/nuevo";
+                
+                if (categoria.getId() != null) {
+                    return "redirect:/categorias/editar/" + categoria.getId();
+                } else {
+                    return "redirect:/categorias/nuevo";
+                }
             }
 
             // Si no se especifica activa, establecer como true
@@ -136,35 +150,38 @@ public class CategoriaController {
             }
 
             return "redirect:/categorias";
-        } catch (Exception e) {
+            
+        } catch (RuntimeException e) {
             System.err.println("❌ Error al guardar categoría: " + e.getMessage());
+            redirectAttributes.addFlashAttribute("error", e.getMessage());
+            redirectAttributes.addFlashAttribute("categoria", categoria);
+            
+            if (categoria.getId() != null) {
+                return "redirect:/categorias/editar/" + categoria.getId();
+            } else {
+                return "redirect:/categorias/nuevo";
+            }
+        } catch (Exception e) {
+            System.err.println("❌ Error inesperado al guardar categoría: " + e.getMessage());
             e.printStackTrace();
-            redirectAttributes.addFlashAttribute("error", "Error al guardar la categoría: " + e.getMessage());
+            redirectAttributes.addFlashAttribute("error", "Error inesperado al guardar la categoría: " + e.getMessage());
             return "redirect:/categorias";
         }
     }
 
     /**
-     * Eliminar categoría (desactivar)
+     * ✅ CORREGIDO: Eliminar categoría (desactivar) usando método específico
      */
     @GetMapping("/eliminar/{id}")
     public String eliminarCategoria(@PathVariable Integer id, RedirectAttributes redirectAttributes) {
         try {
             System.out.println("=== ELIMINANDO CATEGORÍA ID: " + id + " ===");
             
-            Categoria categoria = categoriaService.obtenerCategoriaPorId(id).orElse(null);
-            
-            if (categoria == null) {
-                redirectAttributes.addFlashAttribute("error", "Categoría no encontrada");
-                return "redirect:/categorias";
-            }
+            // Usar el método específico de desactivación
+            categoriaService.desactivarCategoria(id);
 
-            // Desactivar la categoría
-            categoria.setActiva(false);
-            categoriaService.guardarCategoria(categoria);
-
-            redirectAttributes.addFlashAttribute("success", "Categoría eliminada correctamente");
-            System.out.println("✅ Categoría eliminada exitosamente");
+            redirectAttributes.addFlashAttribute("success", "Categoría desactivada correctamente");
+            System.out.println("✅ Categoría desactivada exitosamente");
 
         } catch (Exception e) {
             System.err.println("❌ Error al eliminar categoría: " + e.getMessage());
@@ -176,13 +193,14 @@ public class CategoriaController {
     }
 
     /**
-     * Activar/Desactivar categoría
+     * ✅ CORREGIDO: Activar/Desactivar categoría usando método específico
      */
     @GetMapping("/toggle-estado/{id}")
     public String toggleEstadoCategoria(@PathVariable Integer id, RedirectAttributes redirectAttributes) {
         try {
             System.out.println("=== CAMBIANDO ESTADO DE CATEGORÍA ID: " + id + " ===");
             
+            // Obtener el estado actual para el mensaje
             Categoria categoria = categoriaService.obtenerCategoriaPorId(id).orElse(null);
             
             if (categoria == null) {
@@ -190,11 +208,12 @@ public class CategoriaController {
                 return "redirect:/categorias";
             }
 
-            // Cambiar el estado
-            categoria.setActiva(categoria.getActiva() == null || !categoria.getActiva());
-            categoriaService.guardarCategoria(categoria);
+            boolean estadoAnterior = categoria.getActiva();
 
-            String mensaje = categoria.getActiva() ? 
+            // Usar el método específico de cambio de estado
+            categoriaService.cambiarEstadoCategoria(id);
+
+            String mensaje = !estadoAnterior ? 
                 "Categoría activada correctamente" : 
                 "Categoría desactivada correctamente";
             redirectAttributes.addFlashAttribute("success", mensaje);

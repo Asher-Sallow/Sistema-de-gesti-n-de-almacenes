@@ -5,18 +5,20 @@ import com.salesiana.inventory_system.entity.Usuario;
 import com.salesiana.inventory_system.repository.AuditoriaRepository;
 import com.salesiana.inventory_system.repository.UsuarioRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.annotation.PropertyAccessor;
+import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.annotation.*;
+import org.aspectj.lang.ProceedingJoinPoint;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
-
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
-import org.aspectj.lang.ProceedingJoinPoint;
 
 /**
  * Aspecto AOP para auditoría automática de operaciones en el sistema
@@ -39,11 +41,11 @@ public class AuditoriaAspect {
      */
     @AfterReturning(
         pointcut = "execution(* com.salesiana.inventory_system.service.*.guardar*(..)) || " +
-                   "execution(* com.salesiana.inventory_system.service.*.crear*(..)) || " +
-                   "execution(* com.salesiana.inventory_system.service.*.registrar*(..))",
+                  "execution(* com.salesiana.inventory_system.service.*.crear*(..)) || " +
+                  "execution(* com.salesiana.inventory_system.service.*.registrar*(..))",
         returning = "result"
     )
-    public void auditarCreacion(JoinPoint joinPoint, Object result) {
+    public void auditorCreacion(JoinPoint joinPoint, Object result) {
         try {
             if (result == null) return;
 
@@ -61,11 +63,9 @@ public class AuditoriaAspect {
             auditoria.setFechaOperacion(LocalDateTime.now());
 
             auditoriaRepository.save(auditoria);
-
             System.out.println("✅ Auditoría registrada: INSERT en " + tablaAfectada);
-
         } catch (Exception e) {
-            System.err.println("⚠️ Error al registrar auditoría de creación: " + e.getMessage());
+            System.err.println("❌ Error al registrar auditoría de creación: " + e.getMessage());
         }
     }
 
@@ -108,12 +108,10 @@ public class AuditoriaAspect {
                 auditoria.setFechaOperacion(LocalDateTime.now());
 
                 auditoriaRepository.save(auditoria);
-
                 System.out.println("✅ Auditoría registrada: UPDATE en " + tablaAfectada);
             }
-
         } catch (Exception e) {
-            System.err.println("⚠️ Error al registrar auditoría de actualización: " + e.getMessage());
+            System.err.println("❌ Error al registrar auditoría de actualización: " + e.getMessage());
         }
 
         return resultado;
@@ -145,18 +143,16 @@ public class AuditoriaAspect {
                 auditoria.setFechaOperacion(LocalDateTime.now());
 
                 auditoriaRepository.save(auditoria);
-
                 System.out.println("✅ Auditoría registrada: DELETE en " + tablaAfectada);
             }
-
         } catch (Exception e) {
-            System.err.println("⚠️ Error al registrar auditoría de eliminación: " + e.getMessage());
+            System.err.println("❌ Error al registrar auditoría de eliminación: " + e.getMessage());
         }
     }
 
-    // ============================================
-    // MÉTODOS AUXILIARES
-    // ============================================
+    // ===============================
+    // MÉTODOS AUXILIARES CORREGIDOS
+    // ===============================
 
     /**
      * Obtiene el usuario actual desde el contexto de seguridad
@@ -228,21 +224,32 @@ public class AuditoriaAspect {
         } catch (Exception e) {
             // Ignorar si no tiene método getId()
         }
-        
         return null;
     }
 
     /**
-     * Convierte un objeto a JSON
+     * CORRECCIÓN CRÍTICA: Convierte un objeto a JSON de forma segura
      */
     private String convertirAJson(Object objeto) {
         if (objeto == null) return null;
         
         try {
+            // Configurar ObjectMapper para evitar errores de serialización
+            objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
+            objectMapper.configure(SerializationFeature.FAIL_ON_SELF_REFERENCES, false);
+            objectMapper.configure(SerializationFeature.WRITE_SELF_REFERENCES_AS_NULL, true);
+            
+            // Excluir propiedades problemáticas
+            objectMapper.setVisibility(PropertyAccessor.FIELD, Visibility.ANY);
+            objectMapper.setVisibility(PropertyAccessor.GETTER, Visibility.NONE);
+            objectMapper.setVisibility(PropertyAccessor.SETTER, Visibility.NONE);
+            objectMapper.setVisibility(PropertyAccessor.IS_GETTER, Visibility.NONE);
+            
             return objectMapper.writeValueAsString(objeto);
         } catch (Exception e) {
             System.err.println("Error al convertir a JSON: " + e.getMessage());
-            return objeto.toString();
+            // En lugar de retornar toString() que puede causar recursión, retornar mensaje seguro
+            return "{\"error\": \"No se pudo serializar el objeto: " + e.getMessage().replace("\"", "'") + "\"}";
         }
     }
 

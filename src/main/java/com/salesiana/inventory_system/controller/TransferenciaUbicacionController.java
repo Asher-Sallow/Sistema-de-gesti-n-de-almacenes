@@ -1,5 +1,6 @@
 package com.salesiana.inventory_system.controller;
 
+import com.salesiana.inventory_system.entity.Lote;
 import com.salesiana.inventory_system.entity.TransferenciaUbicacion;
 import com.salesiana.inventory_system.service.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,6 +12,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 @Controller
 @RequestMapping("/transferencias-ubicacion")
@@ -123,59 +125,81 @@ public String listarTransferencias(
     }
 
     @PostMapping("/guardar")
-    public String guardarTransferencia(@ModelAttribute TransferenciaUbicacion transferencia, RedirectAttributes redirectAttributes) {
-        try {
-            System.out.println("=== GUARDANDO TRANSFERENCIA ===");
-            System.out.println("Producto ID: " + (transferencia.getProducto() != null ? transferencia.getProducto().getId() : "null"));
-            System.out.println("Ubicación Origen ID: " + (transferencia.getUbicacionOrigen() != null ? transferencia.getUbicacionOrigen().getId() : "null"));
-            System.out.println("Ubicación Destino ID: " + (transferencia.getUbicacionDestino() != null ? transferencia.getUbicacionDestino().getId() : "null"));
-            System.out.println("Cantidad: " + transferencia.getCantidad());
+public String guardarTransferencia(@ModelAttribute TransferenciaUbicacion transferencia, RedirectAttributes redirectAttributes) {
+    try {
+        System.out.println("=== GUARDANDO TRANSFERENCIA ===");
+
+        System.out.println("Producto ID: " + (transferencia.getProducto() != null ? transferencia.getProducto().getId() : "null"));
+        System.out.println("Ubicación Origen ID: " + (transferencia.getUbicacionOrigen() != null ? transferencia.getUbicacionOrigen().getId() : "null"));
+        System.out.println("Ubicación Destino ID: " + (transferencia.getUbicacionDestino() != null ? transferencia.getUbicacionDestino().getId() : "null"));
+        System.out.println("Cantidad: " + transferencia.getCantidad());
+
+        // ✅ VALIDACIONES MEJORADAS
+        if (transferencia.getProducto() == null || transferencia.getProducto().getId() == null) {
+            redirectAttributes.addFlashAttribute("error", "Debe seleccionar un producto");
+            return "redirect:/transferencias-ubicacion/nuevo";
+        }
+
+        if (transferencia.getUbicacionDestino() == null || transferencia.getUbicacionDestino().getId() == null) {
+            redirectAttributes.addFlashAttribute("error", "Debe seleccionar una ubicación destino");
+            return "redirect:/transferencias-ubicacion/nuevo";
+        }
+
+        if (transferencia.getCantidad() == null || transferencia.getCantidad() <= 0) {
+            redirectAttributes.addFlashAttribute("error", "La cantidad debe ser mayor a 0");
+            return "redirect:/transferencias-ubicacion/nuevo";
+        }
+
+        // ✅ VALIDACIÓN CORREGIDA: Verificar si el lote pertenece al producto (CON MANEJO DE NULL)
+        if (transferencia.getLote() != null && transferencia.getLote().getId() != null) {
+            Optional<Lote> loteOpt = loteService.obtenerLotePorId(transferencia.getLote().getId());
             
-            // Validar datos básicos
-            if (transferencia.getProducto() == null || transferencia.getProducto().getId() == null) {
-                redirectAttributes.addFlashAttribute("error", "Debe seleccionar un producto");
-                return "redirect:/transferencias-ubicacion/nuevo";
-            }
-            
-            if (transferencia.getUbicacionDestino() == null || transferencia.getUbicacionDestino().getId() == null) {
-                redirectAttributes.addFlashAttribute("error", "Debe seleccionar una ubicación destino");
-                return "redirect:/transferencias-ubicacion/nuevo";
-            }
-            
-            if (transferencia.getCantidad() == null || transferencia.getCantidad() <= 0) {
-                redirectAttributes.addFlashAttribute("error", "La cantidad debe ser mayor a 0");
-                return "redirect:/transferencias-ubicacion/nuevo";
-            }
-            
-            // Validar que ubicación origen y destino sean diferentes
-            if (transferencia.getUbicacionOrigen() != null && 
-                transferencia.getUbicacionOrigen().getId() != null && 
-                transferencia.getUbicacionOrigen().getId().equals(transferencia.getUbicacionDestino().getId())) {
-                redirectAttributes.addFlashAttribute("error", "La ubicación de origen y destino no pueden ser iguales");
-                return "redirect:/transferencias-ubicacion/nuevo";
-            }
-            
-            // Verificar si el lote pertenece al producto
-            if (transferencia.getLote() != null && transferencia.getLote().getId() != null) {
-                if (!transferencia.getLote().getProducto().getId().equals(transferencia.getProducto().getId())) {
+            if (loteOpt.isPresent()) {
+                Lote lote = loteOpt.get();
+                
+                // ✅ VERIFICAR SI EL LOTE TIENE PRODUCTO ASOCIADO
+                if (lote.getProducto() == null) {
+                    redirectAttributes.addFlashAttribute("error", "El lote seleccionado no tiene un producto asociado en la base de datos");
+                    return "redirect:/transferencias-ubicacion/nuevo";
+                }
+                
+                // ✅ VERIFICAR QUE EL LOTE PERTENECE AL PRODUCTO SELECCIONADO
+                if (!lote.getProducto().getId().equals(transferencia.getProducto().getId())) {
                     redirectAttributes.addFlashAttribute("error", "El lote seleccionado no pertenece al producto seleccionado");
                     return "redirect:/transferencias-ubicacion/nuevo";
                 }
+            } else {
+                redirectAttributes.addFlashAttribute("error", "El lote seleccionado no existe");
+                return "redirect:/transferencias-ubicacion/nuevo";
             }
+        }
+
+        // ✅ VALIDAR QUE UBICACIÓN ORIGEN Y DESTINO SEAN DIFERENTES
+        if (transferencia.getUbicacionOrigen() != null && 
+            transferencia.getUbicacionOrigen().getId() != null && 
+            transferencia.getUbicacionDestino() != null &&
+            transferencia.getUbicacionOrigen().getId().equals(transferencia.getUbicacionDestino().getId())) {
             
-            // Registrar transferencia
-            transferenciaService.registrarTransferencia(transferencia);
-            
-            System.out.println("✅ Transferencia registrada exitosamente");
-            redirectAttributes.addFlashAttribute("success", "Transferencia registrada exitosamente");
-            return "redirect:/transferencias-ubicacion";
-        } catch (Exception e) {
-            System.err.println("❌ Error al registrar transferencia: " + e.getMessage());
-            e.printStackTrace();
-            redirectAttributes.addFlashAttribute("error", "Error al registrar transferencia: " + e.getMessage());
+            redirectAttributes.addFlashAttribute("error", "La ubicación de origen y destino no pueden ser iguales");
             return "redirect:/transferencias-ubicacion/nuevo";
         }
+
+        // ✅ REGISTRAR TRANSFERENCIA
+        transferenciaService.registrarTransferencia(transferencia);
+
+        System.out.println("✅ Transferencia registrada exitosamente");
+
+        redirectAttributes.addFlashAttribute("success", "Transferencia registrada exitosamente");
+
+        return "redirect:/transferencias-ubicacion";
+
+    } catch (Exception e) {
+        System.err.println("❌ Error al registrar transferencia: " + e.getMessage());
+        e.printStackTrace();
+        redirectAttributes.addFlashAttribute("error", "Error al registrar transferencia: " + e.getMessage());
+        return "redirect:/transferencias-ubicacion/nuevo";
     }
+}
     
     @PostMapping("/buscar")
     public String buscarTransferencias(
@@ -219,4 +243,43 @@ public String listarTransferencias(
         
         return "transferencias/lista";
     }
+    
+    // Añadir estos métodos al controlador existente
+
+/**
+ * Ver detalle de una transferencia específica
+ */
+@GetMapping("/detalle/{id}")
+public String verDetalleTransferencia(@PathVariable Integer id, Model model, RedirectAttributes redirectAttributes) {
+    try {
+        System.out.println("=== CARGANDO DETALLE DE TRANSFERENCIA ID: " + id + " ===");
+        
+        TransferenciaUbicacion transferencia = transferenciaService.obtenerPorId(id)
+                .orElseThrow(() -> new RuntimeException("Transferencia no encontrada"));
+        
+        model.addAttribute("transferencia", transferencia);
+        System.out.println("✅ Detalle de transferencia cargado exitosamente");
+        
+        return "transferencias/detalle";
+    } catch (Exception e) {
+        System.err.println("❌ Error al cargar detalle de transferencia: " + e.getMessage());
+        e.printStackTrace();
+        redirectAttributes.addFlashAttribute("error", "Error al cargar el detalle: " + e.getMessage());
+        return "redirect:/transferencias-ubicacion";
+    }
+}
+
+/**
+ * Endpoint API para obtener lotes por producto (para AJAX)
+ */
+@GetMapping("/api/lotes/producto/{productoId}")
+@ResponseBody
+public List<Lote> obtenerLotesPorProducto(@PathVariable Integer productoId) {
+    try {
+        return loteService.obtenerLotesDisponiblesPorProducto(productoId);
+    } catch (Exception e) {
+        System.err.println("Error al obtener lotes por producto: " + e.getMessage());
+        return Collections.emptyList();
+    }
+}
 }

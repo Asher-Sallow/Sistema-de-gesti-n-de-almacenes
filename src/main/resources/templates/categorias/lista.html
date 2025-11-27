@@ -27,6 +27,11 @@
             background-color: #f8f9fa;
             cursor: pointer;
         }
+        /* Estilo para filas inactivas */
+        .table-hover tbody tr.categoria-inactiva {
+            background-color: #f8f9fa;
+            opacity: 0.7;
+        }
         .btn-icon {
             width: 36px;
             height: 36px;
@@ -50,6 +55,10 @@
             justify-content: center;
             font-size: 1.2rem;
             margin-right: 10px;
+        }
+        /* Icono gris para categorías inactivas */
+        .categoria-icon.inactiva {
+            background: linear-gradient(135deg, #6c757d 0%, #adb5bd 100%);
         }
     </style>
 </head>
@@ -144,9 +153,11 @@
                                     <p class="text-muted mb-0">No hay categorías registradas</p>
                                 </td>
                             </tr>
-                            <tr th:each="categoria : ${categorias}">
+                            <tr th:each="categoria : ${categorias}"
+                                th:class="${categoria.activa == null or !categoria.activa} ? 'categoria-inactiva' : ''">
                                 <td class="text-center">
-                                    <div class="categoria-icon">
+                                    <div class="categoria-icon"
+                                         th:classappend="${categoria.activa == null or !categoria.activa} ? 'inactiva' : ''">
                                         <i class="fas fa-tag"></i>
                                     </div>
                                 </td>
@@ -155,6 +166,10 @@
                                 </td>
                                 <td>
                                     <strong th:text="${categoria.nombre}">Categoría</strong>
+                                    <span th:if="${categoria.activa == null or !categoria.activa}" 
+                                          class="badge bg-secondary ms-2">
+                                        <i class="fas fa-eye-slash"></i> Inactiva
+                                    </span>
                                 </td>
                                 <td>
                                     <span th:if="${categoria.descripcion != null and !categoria.descripcion.isEmpty()}" 
@@ -169,32 +184,39 @@
                                 <td>
                                     <span th:if="${categoria.activa != null and categoria.activa}" 
                                           class="badge bg-success">
-                                        <i class="fas fa-check me-1"></i>Activa
+                                        <i class="fas fa-check-circle me-1"></i>Activa
                                     </span>
                                     <span th:if="${categoria.activa == null or !categoria.activa}" 
                                           class="badge bg-secondary">
-                                        <i class="fas fa-times me-1"></i>Inactiva
+                                        <i class="fas fa-times-circle me-1"></i>Inactiva
                                     </span>
                                 </td>
                                 <td class="text-center">
                                     <div class="btn-group" role="group">
+                                        <!-- Botón Editar -->
                                         <a th:href="@{/categorias/editar/{id}(id=${categoria.id})}" 
                                            class="btn btn-sm btn-warning"
                                            title="Editar">
                                             <i class="fas fa-edit"></i>
                                         </a>
+                                        
+                                        <!-- Botón Toggle Estado -->
                                         <a th:href="@{/categorias/toggle-estado/{id}(id=${categoria.id})}" 
-                                           class="btn btn-sm"
+                                           class="btn btn-sm btn-toggle-estado"
                                            th:classappend="${categoria.activa != null and categoria.activa} ? 'btn-secondary' : 'btn-success'"
-                                           th:title="${categoria.activa != null and categoria.activa} ? 'Desactivar' : 'Activar'">
+                                           th:data-nombre="${categoria.nombre}"
+                                           th:data-activa="${categoria.activa}"
+                                           th:title="${categoria.activa != null and categoria.activa} ? 'Desactivar Categoría' : 'Activar Categoría'">
                                             <i class="fas"
                                                th:classappend="${categoria.activa != null and categoria.activa} ? 'fa-toggle-off' : 'fa-toggle-on'"></i>
                                         </a>
+                                        
+                                        <!-- ✅ CORREGIDO: Botón Eliminar sin concatenación en onclick -->
                                         <a th:href="@{/categorias/eliminar/{id}(id=${categoria.id})}" 
-                                           class="btn btn-sm btn-danger"
-                                           onclick="return confirm('¿Está seguro de eliminar esta categoría?')"
-                                           title="Eliminar">
-                                            <i class="fas fa-trash"></i>
+                                           class="btn btn-sm btn-danger btn-eliminar-categoria"
+                                           th:data-nombre="${categoria.nombre}"
+                                           title="Desactivar Categoría">
+                                            <i class="fas fa-ban"></i>
                                         </a>
                                     </div>
                                 </td>
@@ -225,9 +247,12 @@
                     language: {
                         url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json'
                     },
-                    order: [[2, "asc"]], // Ordenar por nombre
+                    order: [[1, 'desc']], // Ordenar por ID descendente - COMILLAS SIMPLES
                     pageLength: 25,
-                    responsive: true
+                    responsive: true,
+                    columnDefs: [
+                        { orderable: false, targets: [0, 5] }
+                    ]
                 });
             }
 
@@ -235,6 +260,30 @@
             setTimeout(function() {
                 $('.alert').fadeOut('slow');
             }, 5000);
+
+            // Manejar confirmación de eliminación con nombre de categoría
+            $('.btn-eliminar-categoria').on('click', function(e) {
+                const nombreCategoria = $(this).data('nombre');
+                if (!confirm('¿Está seguro de desactivar la categoría "' + nombreCategoria + '"?')) {
+                    e.preventDefault();
+                    return false;
+                }
+            });
+
+            // Manejar confirmación de toggle estado
+            $('.btn-toggle-estado').on('click', function(e) {
+                const nombreCategoria = $(this).data('nombre');
+                const activa = $(this).data('activa');
+                const accion = activa ? 'desactivar' : 'activar';
+                
+                if (!confirm('¿Está seguro de ' + accion + ' la categoría "' + nombreCategoria + '"?')) {
+                    e.preventDefault();
+                    return false;
+                }
+            });
+
+            // Log en consola para debugging
+            console.log('Total categorías en la tabla:', tableRows);
         });
     </script>
 </body>
